@@ -474,7 +474,7 @@ void setupWiFi() {
   IPAddress local_IP(192, 168, 4, 1);
   WiFi.softAPConfig(local_IP, local_IP, IPAddress(255, 255, 255, 0));
   uint8_t mac[6];
-  esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+  esp_read_mac(mac, ESP_MAC_WIFI_AP);
   char deviceName[25];
   sprintf(deviceName, "LightTrack-VISION-%02X%02X%02X", mac[3], mac[4], mac[5]);
   WiFi.softAP(deviceName, "12345678");
@@ -503,7 +503,7 @@ void setupWiFi() {
 }
 void checkWiFiTimeout() {if(wifiActive&&wifiTimeoutMinutes>0&&millis()-wifiStartTime>(unsigned long)wifiTimeoutMinutes*60*1000){WiFi.mode(WIFI_OFF);wifiActive=false;}}
 void webServerTask(void*p){unsigned long lastRadarBroadcast=0;for(;;){if(wifiActive){server.handleClient();webSocket.loop();ArduinoOTA.handle();if(webSocket.connectedClients()>0&&millis()-lastRadarBroadcast>100){broadcastRadarData();lastRadarBroadcast=millis();}}vTaskDelay(pdMS_TO_TICKS(2));}}
-void setupOTA(){ArduinoOTA.onStart([](){});ArduinoOTA.onEnd([](){});ArduinoOTA.onProgress([](unsigned int p,unsigned int t){});ArduinoOTA.onError([](ota_error_t e){});uint8_t m[6];esp_read_mac(m,ESP_MAC_WIFI_SOFTAP);char d[25];sprintf(d,"LightTrack-VISION-%02X%02X%02X",m[3],m[4],m[5]);ArduinoOTA.setHostname(d);ArduinoOTA.begin();}
+void setupOTA(){ArduinoOTA.onStart([](){});ArduinoOTA.onEnd([](){});ArduinoOTA.onProgress([](unsigned int p,unsigned int t){});ArduinoOTA.onError([](ota_error_t e){});uint8_t m[6];esp_read_mac(m,ESP_MAC_WIFI_AP);char d[25];sprintf(d,"LightTrack-VISION-%02X%02X%02X",m[3],m[4],m[5]);ArduinoOTA.setHostname(d);ArduinoOTA.begin();}
 void handleSetTime(){if(server.hasArg("tz")){clientTimezoneOffsetMinutes=server.arg("tz").toInt();isTimeOffsetSet=true;}if(server.hasArg("epoch")){time_t e=strtoul(server.arg("epoch").c_str(),NULL,10);struct timeval tv={.tv_sec=e,.tv_usec=0};settimeofday(&tv,NULL);}updateTime();server.send(200,"text/plain","OK");}
 void updateTime(){unsigned long c=millis();if(c-lastTimeCheck<1000)return;lastTimeCheck=c;time_t n=time(nullptr);if(n<1609459200UL||!isTimeOffsetSet)return;time_t l=n+(clientTimezoneOffsetMinutes*60);struct tm t;gmtime_r(&l,&t);int cur=t.tm_hour*60+t.tm_min;int s=startHour*60+startMinute;int e=endHour*60+endMinute;bool on=(s<=e)?(cur>=s&&cur<e):(cur>=s||cur<e);if(!smarthomeOverride&&(lightOn!=on)){lightOn=on;}}
 void handleGetCurrentTime(){char t[20]="N/A";time_t n=time(nullptr);if(n>1609459200UL&&isTimeOffsetSet){time_t l=n+(clientTimezoneOffsetMinutes*60);strftime(t,sizeof(t),"%H:%M:%S",gmtime(&l));}else if(n>1609459200UL){strcpy(t,"No TZ");}else{strcpy(t,"Syncing...");}server.send(200,"application/json",String("{\"time\":\"")+t+"\"}");}
